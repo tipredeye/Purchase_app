@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
-from gsheet_utils import load_sheet, save_sheet
+from Complete_pur_app.gsheet_utils import load_sheet, save_sheet
 
 st.set_page_config(page_title="คำขอสั่งซื้อ", layout="wide")
 st.title("📋 รายการขอสั่งซื้อ & แจ้งขอสั่งซื้อ")
@@ -195,3 +195,4 @@ else:
         df_req = edited_df.copy()
         save_sheet("Request", df_req)
         st.success("บันทึกการเปลี่ยนแปลงสถานะเรียบร้อยแล้ว ✅")
+
