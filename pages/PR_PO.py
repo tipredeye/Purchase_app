@@ -1,5 +1,6 @@
 # pages/3_📄_PR_PO.py
 import streamlit as st
+from Complete_pur_app.gsheet_utils import load_sheet, save_sheet
 
 st.set_page_config(page_title="PR / PO", layout="wide")
 st.title("📄 PR / PO Management")
@@ -83,3 +84,4 @@ if st.button("💾 บันทึกการเปลี่ยนแปลง 
 
     save_sheet("PRPO", df_updated)
     st.success("บันทึกการเปลี่ยนแปลงสถานะ PR/PO เรียบร้อย ✅")
+
