@@ -5,7 +5,7 @@ from gsheet_utils import load_sheet
 st.set_page_config(page_title="PR / PO", layout="wide")
 st.title("📄 PR / PO Management")
 
-df_prpo = load_sheet("PRPO")
+df_prpo = load_sheet("PR_PO")
 
 PRPO_STATUS_OPTIONS = [
     "จัดทำใบสั่งซื้อ(PO)",
@@ -82,5 +82,6 @@ if st.button("💾 บันทึกการเปลี่ยนแปลง 
         )
         df_updated.loc[cond, "Status"] = row["Status"]
 
-    save_sheet("PRPO", df_updated)
+    save_sheet("PR_PO", df_updated)
     st.success("บันทึกการเปลี่ยนแปลงสถานะ PR/PO เรียบร้อย ✅")
+
