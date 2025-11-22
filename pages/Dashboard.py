@@ -8,7 +8,7 @@ st.title("📊 Purchase Dashboard")
 
 # โหลดข้อมูล
 df_req = load_sheet("Request")
-df_prpo = load_sheet("PRPO")
+df_prpo = load_sheet("PR_PO")
 
 if df_req.empty and df_prpo.empty:
     st.info("ยังไม่มีข้อมูลในระบบเลย ลองไปสร้างคำขอสั่งซื้อหรือ PR/PO ก่อนนะ ✨")
@@ -107,4 +107,5 @@ if not df_req.empty:
     st.dataframe(df_view, use_container_width=True, hide_index=True)
 else:
     st.caption("ยังไม่มี Request ให้แสดง")
+
 
