@@ -1,108 +1,123 @@
-# pages/3_📋_Requests.py
 import streamlit as st
 import pandas as pd
 from datetime import date
-from gsheet_utils import load_sheet , save_sheet
+from gsheet_utils import load_sheet, save_sheet
 
-st.subheader("📝 แจ้งขอสั่งซื้อ (Create Request)")
+st.title("📝 แจ้งขอสั่งซื้อ")
 
-with st.form("new_request_form", clear_on_submit=True):
+# โหลดข้อมูลประกอบ
+df_item = load_sheet("Item_Data")
+df_enum = load_sheet("Enum_Data")
+df_req = load_sheet("Request")
+
+# --- Priority options ---
+if "Priority" in df_enum.columns:
+    priority_options = df_enum["Priority"].dropna().unique().tolist()
+else:
+    priority_options = ["ปกติ", "เร่งด่วน", "ด่วนมาก"]
+
+# --- สร้าง Request ID ---
+def generate_new_request_id(df):
+    if df.empty or "Request_ID" not in df.columns:
+        return "REQ-0001"
+    ids = df["Request_ID"].astype(str)
+    nums = [int(x.split("-")[1]) for x in ids if x.startswith("REQ-")]
+    n = max(nums) + 1 if nums else 1
+    return f"REQ-{n:04d}"
+
+# --- ค้นหา wildcard ---
+def search_items(df_item, keyword, max_result=20):
+    if "*" in keyword:
+        import re
+        pattern = re.escape(keyword).replace("\\*", ".*")
+        mask = df_item["Description"].str.contains(pattern, case=False, regex=True)
+    else:
+        mask = df_item["Description"].str.contains(keyword, case=False)
+    return df_item[mask].head(max_result)
+
+# -------------------------------------------------------------
+# FORM START
+# -------------------------------------------------------------
+with st.form("request_form"):
+
     today = date.today()
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.text_input("Request Date", value=today.strftime("%Y-%m-%d"), disabled=True)
-    with c2:
-        priority = st.selectbox("Priority", priority_options, index=0)
-    with c3:
-        st.text_input("Status (ตั้งต้น)", value="ขอสั่งซื้อ", disabled=True)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.text_input("Request Date", today.strftime("%Y-%m-%d"), disabled=True)
+    with col2:
+        priority = st.selectbox("Priority", priority_options)
+    with col3:
+        st.text_input("Status", "ขอสั่งซื้อ", disabled=True)
 
-    st.markdown("### เลือกสินค้า (Dropdown) หรือค้นหาแบบพิมพ์")
+    st.markdown("### เลือกสินค้า")
 
     colA, colB = st.columns(2)
 
-    # --------------------------
-    # A) Dropdown: เลือกสินค้า
-    # --------------------------
+    # Dropdown รายการสินค้า
     with colA:
-        item_dropdown = st.selectbox(
-            "เลือกสินค้า (จาก Item Data)",
-            ["(ไม่เลือกสินค้า)"] + [
-                f"{row['No.']} - {row['Description']}"
-                for _, row in df_item.iterrows()
-            ]
+        dropdown_opt = ["(ไม่เลือก)"] + [
+            f"{row['No.']} - {row['Description']}"
+            for _, row in df_item.iterrows()
+        ]
+        dropdown_selected = st.selectbox(
+            "เลือกสินค้า",
+            dropdown_opt
         )
 
-    # --------------------------
-    # B) Search Box แบบเดิม
-    # --------------------------
+    # Search box
     with colB:
-        desc_query = st.text_input(
-            "ค้นหาสินค้า (รองรับ wildcard เช่น *lens*)",
-            value="",
-            placeholder="ใส่คำค้น หรือเลือกรายการจากด้านซ้าย"
-        )
+        search_text = st.text_input("ค้นหาสินค้า (wildcard ใช้ * ได้)")
 
-    # กำหนดค่าจากการเลือก
     selected_item_no = None
     selected_item_desc = None
 
-    # --------------------------
-    # Logic A: ถ้าเลือกจาก dropdown
-    # --------------------------
-    if item_dropdown != "(ไม่เลือกสินค้า)":
-        no_part = item_dropdown.split(" - ")[0]
-        desc_part = " - ".join(item_dropdown.split(" - ")[1:])
-        selected_item_no = no_part
-        selected_item_desc = desc_part
-
-    # --------------------------
-    # Logic B: ถ้าพิมพ์ค้นหาเอง
-    # --------------------------
-    elif desc_query:
-        matched = search_items_with_wildcard(df_item, desc_query, limit=20)
+    # ถ้าเลือกจาก dropdown
+    if dropdown_selected != "(ไม่เลือก)":
+        parts = dropdown_selected.split(" - ")
+        selected_item_no = parts[0]
+        selected_item_desc = " - ".join(parts[1:])
+    # ถ้าใช้ search
+    elif search_text:
+        matched = search_items(df_item, search_text)
         if not matched.empty:
-            options_idx = matched.index.tolist()
-            option_labels = [
-                f"{matched.loc[i, 'No.']} - {matched.loc[i, 'Description']}"
-                for i in options_idx
+            idxs = matched.index.tolist()
+            labels = [
+                f"{matched.loc[i,'No.']} - {matched.loc[i,'Description']}"
+                for i in idxs
             ]
-            chosen = st.selectbox(
-                "เลือกรายการที่ค้นพบ",
-                options=options_idx,
-                format_func=lambda i: option_labels[options_idx.index(i)]
-            )
-            selected_item_no = str(matched.loc[chosen, "No."])
-            selected_item_desc = str(matched.loc[chosen, "Description"])
+            choose = st.selectbox("เลือกสินค้าที่ค้นพบ", idxs, format_func=lambda i: labels[idxs.index(i)])
+            selected_item_no = matched.loc[choose, "No."]
+            selected_item_desc = matched.loc[choose, "Description"]
         else:
-            st.warning("ไม่พบสินค้าจากคำค้น")
+            st.warning("ไม่พบสินค้า")
 
-    quantity = st.number_input("Quantity", min_value=1, step=1, value=1)
-    back_order = st.text_input("Back order / หมายเหตุเพิ่มเติม", "")
+    qty = st.number_input("Quantity", min_value=1, step=1)
+    back_order = st.text_input("Back order / หมายเหตุ")
 
+    # ---- SUBMIT BUTTON IS HERE (สำคัญมาก) ----
     submitted = st.form_submit_button("บันทึกคำขอสั่งซื้อ")
 
-    if submitted:
-        if not selected_item_no or not selected_item_desc:
-            st.error("กรุณาเลือกสินค้า หรือค้นหาให้เจอก่อนบันทึก")
-        else:
-            new_id = generate_new_request_id(df_req)
+# -------------------------------------------------------------
+# FORM END
+# -------------------------------------------------------------
 
-            new_row = {
-                "Request_ID": new_id,
-                "Priority": priority,
-                "Request_Date": today.strftime("%Y-%m-%d"),
-                "Status": "ขอสั่งซื้อ",
-                "Item_No": selected_item_no,
-                "Description": selected_item_desc,
-                "Quantity": quantity,
-                "Lead_Time_Status": "0",
-                "Back_order": back_order,
-            }
-
-            df_req = df_req.append(new_row, ignore_index=True)
-            save_sheet("Request", df_req)
-
-            st.success(f"บันทึกคำขอสั่งซื้อเรียบร้อย (Request_ID: {new_id})")
-
-
+if submitted:
+    if not selected_item_no:
+        st.error("กรุณาเลือกสินค้า หรือค้นหาให้พบก่อนบันทึก")
+    else:
+        new_id = generate_new_request_id(df_req)
+        new_row = {
+            "Request_ID": new_id,
+            "Priority": priority,
+            "Request_Date": today.strftime("%Y-%m-%d"),
+            "Status": "ขอสั่งซื้อ",
+            "Item_No": selected_item_no,
+            "Description": selected_item_desc,
+            "Quantity": qty,
+            "Lead_Time_Status": "0",
+            "Back_Order": back_order
+        }
+        df_req = df_req.append(new_row, ignore_index=True)
+        save_sheet("Request", df_req)
+        st.success(f"บันทึกคำขอสั่งซื้อสำเร็จ ✔ (ID: {new_id})")
