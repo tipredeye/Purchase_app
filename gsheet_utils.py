@@ -4,14 +4,15 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
+st.write("SPREADSHEET_ID =",
+st.secrets.get("SPREADSHEET_ID", "NOT FOUND"))
+
 # ใส่ Spreadsheet ID ของ Google Sheet ที่ใช้เป็น DB
-SPREADSHEET_ID = "1PJAsYCGARfKITdB0ITZUpr0F-vaImuXI431iQjy1YZY"
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+CREDS = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPES)
+client = gspread.authorize(CREDS)
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
+SPREADSHEET_ID = st.secrets["SPREADSHEET_ID"]
 
 @st.cache_resource
 def get_gsheet_client():
