@@ -110,7 +110,7 @@ if submitted:
         "Qty_to_Receive": quantity,   # เริ่มต้น = จำนวนที่สั่ง
         "Quantity_Received": 0,          # ยังไม่รับเข้า
         "Outstanding_Quantity": quantity,    # outstanding เท่ากับ qty ตอนเริ่ม
-        "Expected_Receipt_Date": "",          # ถ้ามี ETA ค่อยอัปเดตทีหลัง
+        "Expected_Received": "",          # ถ้ามี ETA ค่อยอัปเดตทีหลัง
         "Vendor_No.": "",
         "Vendor_Name": "",
     }
